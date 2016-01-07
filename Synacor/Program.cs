@@ -11,14 +11,11 @@ namespace Synacore
     {
         static void Main(string[] args)
         {
-            // load instructions into an array
-            var instructionPath = @"..\..\..\challenge.bin";
-            byte[] buffer = File.ReadAllBytes(instructionPath);
-            ushort[] instructions = new ushort[buffer.Length / 2];
-            Buffer.BlockCopy(buffer, 0, instructions, 0, buffer.Length);
             // Initialize machine and run
-            var m = new Machine(instructions);
-            m.Run();
+            var m = new Machine(@"..\..\..\synacor.bin");
+            //m.QueueCommands(File.ReadAllText(@"..\..\..\commands.txt").Replace("\r", ""));
+            m.Run(File.ReadAllText(@"..\..\..\commands.txt").Replace("\r", ""));
+            File.WriteAllText(@"..\..\..\output.txt", m.Output);
             // Finalize
             Console.ReadKey();
         }

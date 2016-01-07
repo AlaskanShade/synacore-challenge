@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,6 +14,16 @@ namespace Synacore
         public ushort[] Register { get; private set; }
         public Stack<ushort> Stack { get; private set; }
         private uint Current;
+        private Queue<char> Commands;
+        private StringBuilder output;
+
+        public string Output
+        {
+            get
+            {
+                return output.ToString();
+            }
+        }
 
         #region Command parameters
         private ushort A
@@ -41,25 +52,54 @@ namespace Synacore
 
         private ushort GetValue(ushort input)
         {
-            if (input > 32767) return Register[input - 32768];
+            if (input > 32767) 
+                return Register[input - 32768];
             return input;
         }
         #endregion
 
-        public Machine(ushort[] instructions)
+        public Machine()
         {
+            output = new StringBuilder();
             // 16 bit memory with 15-bit address
             Memory = new ushort[32767];
             // 8 registers
             Register = new ushort[8];
             // unbounded stack
             Stack = new Stack<ushort>();
-            Memory = instructions;
+        }
+
+        public Machine(string filePath) : this()
+        {
+            // load instructions into an array
+            var instructionPath = @"..\..\..\challenge.bin";
+            byte[] buffer = File.ReadAllBytes(instructionPath);
+            Buffer.BlockCopy(buffer, 0, Memory, 0, buffer.Length);
+            Commands = new Queue<char>();
+        }
+
+        public Machine(ushort[] instructions) : this()
+        {
+            // copy instructions into memory
+            Array.Copy(instructions, Memory, instructions.Length);
+        }
+
+        public void QueueCommands(string input)
+        {
+            foreach (var c in input)
+                Commands.Enqueue(c);
         }
 
         public void Run()
         {
             while (Step()) ;
+        }
+
+        public void Run(string commands)
+        {
+            QueueCommands(commands);
+            while (Commands.Count > 0)
+                Step();
         }
 
         private bool Step()
@@ -147,15 +187,22 @@ namespace Synacore
                     return true;
                 case 19: // out: write ascii code a to output
                     Console.Write((char)A);
+                    output.Append((char)A);
                     Current += 2;
                     return true;
                 case 20: // in: read character to a
-                    ConsoleKeyInfo k;
-                    //do
-                    //{
-                        k = Console.ReadKey();
-                        Register[Memory[Current + 1] % 32768] = k.KeyChar;
-                    //} while (k.Key != ConsoleKey.Enter);
+                    char k;
+                    if (Commands.Count > 0)
+                    {
+                        k = Commands.Dequeue();
+                        Console.Write(k);
+                    }
+                    else
+                        k = Console.ReadKey().KeyChar;
+                    if (k == '\r') k = '\n';
+                    output.Append(k);
+                    Register[Memory[Current + 1] % 32768] = k;
+                    Current += 2;
                     return true;
                 case 21: // noop
                     Current++;
